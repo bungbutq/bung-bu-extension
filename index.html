@@ -11,16 +11,13 @@
 
   <title>BUNG BU EXTENSION</title>
 
-  <!-- ICON / LOGO KHI GHIM RA MÀN HÌNH -->
   <link rel="icon" type="image/png" href="./logo4.png">
   <link rel="apple-touch-icon" href="./logo4.png">
   <link rel="manifest" href="./manifest.webmanifest">
 
-  <!-- MÀU THANH TRÌNH DUYỆT / PWA -->
   <meta name="theme-color" content="#355eff">
   <meta name="mobile-web-app-capable" content="yes">
 
-  <!-- IOS ADD TO HOME SCREEN -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="BUNG BU">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -49,6 +46,74 @@
         height: 100vh;
       }
     }
+
+    .wrapper-loading{
+      position:fixed;
+      inset:0;
+      z-index:999999;
+      background:linear-gradient(135deg, #5b3df5 0%, #2596ff 100%);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      color:#ffffff;
+      font-weight:900;
+    }
+
+    .wrapper-loading.hidden{
+      display:none !important;
+    }
+
+    .wrapper-loading-box{
+      width:100%;
+      max-width:430px;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:14px;
+      padding:24px;
+    }
+
+    .wrapper-loading-logo{
+      width:180px;
+      height:180px;
+      object-fit:contain;
+      display:block;
+    }
+
+    .wrapper-loading-title{
+      font-size:18px;
+      line-height:1.4;
+    }
+
+    .wrapper-loading-step{
+      font-size:14px;
+      line-height:1.4;
+      opacity:.92;
+    }
+
+    .wrapper-loading-progress{
+      width:180px;
+      height:8px;
+      border-radius:999px;
+      background:rgba(255,255,255,.35);
+      overflow:hidden;
+    }
+
+    .wrapper-loading-bar{
+      width:35%;
+      height:100%;
+      border-radius:999px;
+      background:#ffffff;
+      animation:wrapperLoadingMove 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes wrapperLoadingMove{
+      from{ width:25%; }
+      to{ width:92%; }
+    }
   </style>
 </head>
 
@@ -61,12 +126,41 @@
     allowfullscreen
   ></iframe>
 
+  <div id="wrapperLoading" class="wrapper-loading hidden">
+    <div class="wrapper-loading-box">
+      <img
+        src="./logo4.png"
+        alt="BUNG BU EXTENSION"
+        class="wrapper-loading-logo"
+      >
+
+      <div class="wrapper-loading-title">Đang tải lại ứng dụng</div>
+      <div class="wrapper-loading-step">Đang làm mới dữ liệu...</div>
+
+      <div class="wrapper-loading-progress">
+        <div class="wrapper-loading-bar"></div>
+      </div>
+    </div>
+  </div>
+
   <script>
     const BUNG_BU_APP_URL = "https://script.google.com/macros/s/AKfycbypGlJUjavguYjlSdpFeWfuQrPntjd2fAipQo6-2XNrjJxhzg2qTOs6GrFoSPwBGDOC/exec";
+
+    function showWrapperLoading() {
+      const el = document.getElementById("wrapperLoading");
+      if (el) el.classList.remove("hidden");
+    }
+
+    function hideWrapperLoading() {
+      const el = document.getElementById("wrapperLoading");
+      if (el) el.classList.add("hidden");
+    }
 
     function reloadBungBuFrame() {
       const frame = document.getElementById("bungBuFrame");
       if (!frame) return;
+
+      showWrapperLoading();
 
       frame.src = BUNG_BU_APP_URL + "?_reload=" + Date.now();
     }
@@ -76,6 +170,14 @@
 
       reloadBungBuFrame();
     });
+
+    const frame = document.getElementById("bungBuFrame");
+
+    if (frame) {
+      frame.addEventListener("load", function() {
+        setTimeout(hideWrapperLoading, 450);
+      });
+    }
   </script>
 </body>
 
