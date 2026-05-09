@@ -47,72 +47,72 @@
       }
     }
 
-    .wrapper-loading{
-      position:fixed;
-      inset:0;
-      z-index:999999;
-      background:linear-gradient(135deg, #5b3df5 0%, #2596ff 100%);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      text-align:center;
-      color:#ffffff;
-      font-weight:900;
+    .wrapper-loading {
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      background: linear-gradient(135deg, #5b3df5 0%, #2596ff 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #ffffff;
+      font-weight: 900;
     }
 
-    .wrapper-loading.hidden{
-      display:none !important;
+    .wrapper-loading.hidden {
+      display: none !important;
     }
 
-    .wrapper-loading-box{
-      width:100%;
-      max-width:430px;
-      min-height:100vh;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      gap:14px;
-      padding:24px;
+    .wrapper-loading-box {
+      width: 100%;
+      max-width: 430px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 24px;
     }
 
-    .wrapper-loading-logo{
-      width:180px;
-      height:180px;
-      object-fit:contain;
-      display:block;
+    .wrapper-loading-logo {
+      width: 180px;
+      height: 180px;
+      object-fit: contain;
+      display: block;
     }
 
-    .wrapper-loading-title{
-      font-size:18px;
-      line-height:1.4;
+    .wrapper-loading-title {
+      font-size: 18px;
+      line-height: 1.4;
     }
 
-    .wrapper-loading-step{
-      font-size:14px;
-      line-height:1.4;
-      opacity:.92;
+    .wrapper-loading-step {
+      font-size: 14px;
+      line-height: 1.4;
+      opacity: .92;
     }
 
-    .wrapper-loading-progress{
-      width:180px;
-      height:8px;
-      border-radius:999px;
-      background:rgba(255,255,255,.35);
-      overflow:hidden;
+    .wrapper-loading-progress {
+      width: 180px;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.35);
+      overflow: hidden;
     }
 
-    .wrapper-loading-bar{
-      width:35%;
-      height:100%;
-      border-radius:999px;
-      background:#ffffff;
-      animation:wrapperLoadingMove 1s ease-in-out infinite alternate;
+    .wrapper-loading-bar {
+      width: 35%;
+      height: 100%;
+      border-radius: 999px;
+      background: #ffffff;
+      animation: wrapperLoadingMove 1s ease-in-out infinite alternate;
     }
 
-    @keyframes wrapperLoadingMove{
-      from{ width:25%; }
-      to{ width:92%; }
+    @keyframes wrapperLoadingMove {
+      from { width: 25%; }
+      to { width: 92%; }
     }
   </style>
 </head>
@@ -121,7 +121,7 @@
   <iframe
     id="bungBuFrame"
     class="app-frame"
-    src="https://script.google.com/macros/s/AKfycbypGlJUjavguYjlSdpFeWfuQrPntjd2fAipQo6-2XNrjJxhzg2qTOs6GrFoSPwBGDOC/exec"
+    src="https://script.google.com/macros/s/AKfycbypGlJUjavguYjlSdpFeWfuQrPntjd2fAipQo6-2XNrjJxhzg2qTOs6GrFoSPwBGDOC/exec?embed=github"
     allow="clipboard-read; clipboard-write; geolocation; fullscreen"
     allowfullscreen
   ></iframe>
@@ -162,7 +162,7 @@
 
       showWrapperLoading();
 
-      frame.src = BUNG_BU_APP_URL + "?_reload=" + Date.now();
+      frame.src = BUNG_BU_APP_URL + "?embed=github&_reload=" + Date.now();
     }
 
     window.addEventListener("message", function(event) {
