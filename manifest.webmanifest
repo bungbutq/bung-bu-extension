@@ -1,0 +1,17 @@
+{
+  "name": "BUNG BU EXTENSION",
+  "short_name": "BUNG BU",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef2f7",
+  "theme_color": "#355eff",
+  "icons": [
+    {
+      "src": "./logo.png",
+      "sizes": "686x686",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
