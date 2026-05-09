@@ -54,11 +54,29 @@
 
 <body>
   <iframe
+    id="bungBuFrame"
     class="app-frame"
     src="https://script.google.com/macros/s/AKfycbypGlJUjavguYjlSdpFeWfuQrPntjd2fAipQo6-2XNrjJxhzg2qTOs6GrFoSPwBGDOC/exec"
     allow="clipboard-read; clipboard-write; geolocation; fullscreen"
     allowfullscreen
   ></iframe>
+
+  <script>
+    const BUNG_BU_APP_URL = "https://script.google.com/macros/s/AKfycbypGlJUjavguYjlSdpFeWfuQrPntjd2fAipQo6-2XNrjJxhzg2qTOs6GrFoSPwBGDOC/exec";
+
+    function reloadBungBuFrame() {
+      const frame = document.getElementById("bungBuFrame");
+      if (!frame) return;
+
+      frame.src = BUNG_BU_APP_URL + "?_reload=" + Date.now();
+    }
+
+    window.addEventListener("message", function(event) {
+      if (!event.data || event.data.type !== "BUNG_BU_RELOAD_APP") return;
+
+      reloadBungBuFrame();
+    });
+  </script>
 </body>
 
 </html>
