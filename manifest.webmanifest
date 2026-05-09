@@ -1,6 +1,6 @@
 {
   "name": "BUNG BU EXTENSION",
-  "short_name": "BUNG BU",
+  "short_name": "BUNG BU EXTENSION",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
