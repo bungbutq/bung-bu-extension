@@ -65,13 +65,6 @@
     const WRAPPER_SESSION_DAYS = 7;
     const WRAPPER_SESSION_MS = WRAPPER_SESSION_DAYS * 24 * 60 * 60 * 1000;
 
-    /*
-      Quan trọng:
-      Tắt reload từ app chính để tránh lỗi vừa vào app lại bị đá về màn tải lại.
-      Nếu sau này thật sự cần reload từ app chính thì đổi thành true.
-    */
-    const ENABLE_WRAPPER_RELOAD_MESSAGE = false;
-
     function isAllowedBungBuOrigin(origin) {
       try {
         const host = new URL(origin).hostname;
@@ -134,7 +127,6 @@
           return null;
         }
 
-        // Gia hạn phiên mỗi lần mở app
         sessionData.expiresAt = getWrapperLoginExpiryTimestamp();
         sessionData.updatedAt = Date.now();
 
@@ -229,6 +221,32 @@
       });
     }
 
+    async function cleanupOldServiceWorkersAndCaches() {
+      try {
+        if ("serviceWorker" in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+
+          regs.forEach(function(reg) {
+            try {
+              reg.unregister();
+            } catch (e) {}
+          });
+        }
+      } catch (e) {}
+
+      try {
+        if ("caches" in window) {
+          const keys = await caches.keys();
+
+          keys.forEach(function(key) {
+            try {
+              caches.delete(key);
+            } catch (e) {}
+          });
+        }
+      } catch (e) {}
+    }
+
     window.addEventListener("message", function(event) {
       if (!event.data || !event.data.type) return;
 
@@ -238,12 +256,8 @@
       }
 
       if (event.data.type === "BUNG_BU_RELOAD_APP") {
-        console.log("[WRAPPER] Nhận BUNG_BU_RELOAD_APP nhưng đã tắt reload để tránh văng app.");
-
-        if (ENABLE_WRAPPER_RELOAD_MESSAGE) {
-          loadBungBuFrame();
-        }
-
+        // Tắt hẳn reload từ app chính để tránh bị văng ra màn tải lại.
+        console.log("[WRAPPER] Đã chặn BUNG_BU_RELOAD_APP.");
         return;
       }
 
@@ -251,7 +265,6 @@
         saveWrapperSession(event.data.sessionData);
 
         // Không reload iframe ở đây.
-        // Chỉ gửi session lại vào app để tránh vòng lặp tải lại.
         sendWrapperSessionToFrameRepeated();
 
         return;
@@ -290,13 +303,9 @@
       }
     });
 
-    loadBungBuFrame();
-
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("./sw.js").catch(function(e) {
-        console.warn("[WRAPPER] Không đăng ký được service worker:", e);
-      });
-    }
+    cleanupOldServiceWorkersAndCaches().finally(function() {
+      loadBungBuFrame();
+    });
   </script>
 </body>
 
