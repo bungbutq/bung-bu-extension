@@ -142,45 +142,158 @@
       </div>
     </div>
   </div>
-
+  
   <script>
     const BUNG_BU_APP_URL = "https://script.google.com/macros/s/AKfycbypGlJUjavguYjlSdpFeWfuQrPntjd2fAipQo6-2XNrjJxhzg2qTOs6GrFoSPwBGDOC/exec";
-
+  
+    const WRAPPER_SESSION_KEY = "bb_wrapper_logged_in_user";
+    const WRAPPER_SESSION_DAYS = 7;
+    const WRAPPER_SESSION_MS = WRAPPER_SESSION_DAYS * 24 * 60 * 60 * 1000;
+  
     function showWrapperLoading() {
       const el = document.getElementById("wrapperLoading");
       if (el) el.classList.remove("hidden");
     }
-
+  
     function hideWrapperLoading() {
       const el = document.getElementById("wrapperLoading");
       if (el) el.classList.add("hidden");
     }
-
+  
+    function isAllowedBungBuOrigin(origin) {
+      try {
+        const host = new URL(origin).hostname;
+  
+        return (
+          host === "script.google.com" ||
+          host === "script.googleusercontent.com" ||
+          host.endsWith(".googleusercontent.com")
+        );
+      } catch (e) {
+        return false;
+      }
+    }
+  
+    function getWrapperLoginExpiryTimestamp() {
+      return Date.now() + WRAPPER_SESSION_MS;
+    }
+  
+    function isWrapperSessionValid(sessionData) {
+      if (!sessionData || !sessionData.user || !sessionData.expiresAt) return false;
+      return Date.now() < Number(sessionData.expiresAt);
+    }
+  
+    function saveWrapperSession(sessionData) {
+      try {
+        if (!sessionData || !sessionData.user) return;
+  
+        const nextSession = {
+          user: sessionData.user,
+          expiresAt: Number(sessionData.expiresAt || 0) > Date.now()
+            ? Number(sessionData.expiresAt)
+            : getWrapperLoginExpiryTimestamp(),
+          updatedAt: Date.now()
+        };
+  
+        localStorage.setItem(WRAPPER_SESSION_KEY, JSON.stringify(nextSession));
+      } catch (e) {
+        console.warn("[WRAPPER] Không lưu được session:", e);
+      }
+    }
+  
+    function loadWrapperSession() {
+      try {
+        const raw = localStorage.getItem(WRAPPER_SESSION_KEY);
+        if (!raw) return null;
+  
+        const sessionData = JSON.parse(raw);
+  
+        if (!isWrapperSessionValid(sessionData)) {
+          localStorage.removeItem(WRAPPER_SESSION_KEY);
+          return null;
+        }
+  
+        // gia hạn phiên mỗi lần mở app
+        sessionData.expiresAt = getWrapperLoginExpiryTimestamp();
+        sessionData.updatedAt = Date.now();
+        localStorage.setItem(WRAPPER_SESSION_KEY, JSON.stringify(sessionData));
+  
+        return sessionData;
+      } catch (e) {
+        localStorage.removeItem(WRAPPER_SESSION_KEY);
+        return null;
+      }
+    }
+  
+    function clearWrapperSession() {
+      try {
+        localStorage.removeItem(WRAPPER_SESSION_KEY);
+      } catch (e) {}
+    }
+  
+    function sendWrapperSessionToFrame() {
+      const frame = document.getElementById("bungBuFrame");
+      if (!frame || !frame.contentWindow) return;
+  
+      const sessionData = loadWrapperSession();
+      if (!sessionData) return;
+  
+      frame.contentWindow.postMessage({
+        type: "BUNG_BU_PARENT_SESSION",
+        sessionData: sessionData
+      }, "*");
+    }
+  
     function reloadBungBuFrame() {
       const frame = document.getElementById("bungBuFrame");
       if (!frame) return;
-
+  
       showWrapperLoading();
-
+  
       frame.src = BUNG_BU_APP_URL + "?embed=github&_reload=" + Date.now();
     }
-
+  
     window.addEventListener("message", function(event) {
-      if (!event.data || event.data.type !== "BUNG_BU_RELOAD_APP") return;
-
-      reloadBungBuFrame();
+      if (!event.data || !event.data.type) return;
+  
+      // Chỉ nhận message từ Apps Script / Googleusercontent
+      if (!isAllowedBungBuOrigin(event.origin)) return;
+  
+      if (event.data.type === "BUNG_BU_RELOAD_APP") {
+        reloadBungBuFrame();
+        return;
+      }
+  
+      if (event.data.type === "BUNG_BU_SAVE_SESSION") {
+        saveWrapperSession(event.data.sessionData);
+        return;
+      }
+  
+      if (event.data.type === "BUNG_BU_CLEAR_SESSION") {
+        clearWrapperSession();
+        return;
+      }
+  
+      if (event.data.type === "BUNG_BU_REQUEST_SESSION") {
+        sendWrapperSessionToFrame();
+        return;
+      }
     });
-
+  
     const frame = document.getElementById("bungBuFrame");
-
+  
     if (frame) {
       frame.addEventListener("load", function() {
         setTimeout(hideWrapperLoading, 450);
+  
+        // Gửi lại phiên đăng nhập từ GitHub wrapper vào iframe
+        setTimeout(sendWrapperSessionToFrame, 700);
       });
     }
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js');
-    } 
+  
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js");
+    }
   </script>
 </body>
 
