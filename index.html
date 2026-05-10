@@ -46,79 +46,6 @@
         height: 100vh;
       }
     }
-
-    .wrapper-loading {
-      position: fixed;
-      inset: 0;
-      z-index: 999999;
-      background: linear-gradient(135deg, #5b3df5 0%, #2596ff 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      color: #ffffff;
-      font-weight: 900;
-    }
-
-    .wrapper-loading.hidden {
-      display: none !important;
-    }
-
-    .wrapper-loading-box {
-      width: 100%;
-      max-width: 430px;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      padding: 24px;
-    }
-
-    .wrapper-loading-logo {
-      width: 180px;
-      height: 180px;
-      object-fit: contain;
-      display: block;
-    }
-
-    .wrapper-loading-title {
-      font-size: 18px;
-      line-height: 1.4;
-    }
-
-    .wrapper-loading-step {
-      font-size: 14px;
-      line-height: 1.4;
-      opacity: .92;
-    }
-
-    .wrapper-loading-progress {
-      width: 180px;
-      height: 8px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, .35);
-      overflow: hidden;
-    }
-
-    .wrapper-loading-bar {
-      width: 35%;
-      height: 100%;
-      border-radius: 999px;
-      background: #ffffff;
-      animation: wrapperLoadingMove 1s ease-in-out infinite alternate;
-    }
-
-    @keyframes wrapperLoadingMove {
-      from {
-        width: 25%;
-      }
-
-      to {
-        width: 92%;
-      }
-    }
   </style>
 </head>
 
@@ -131,23 +58,6 @@
     allowfullscreen
   ></iframe>
 
-  <div id="wrapperLoading" class="wrapper-loading hidden">
-    <div class="wrapper-loading-box">
-      <img
-        src="./logo4.png"
-        alt="BUNG BU EXTENSION"
-        class="wrapper-loading-logo"
-      >
-
-      <div class="wrapper-loading-title">Đang tải lại ứng dụng</div>
-      <div class="wrapper-loading-step">Đang làm mới dữ liệu...</div>
-
-      <div class="wrapper-loading-progress">
-        <div class="wrapper-loading-bar"></div>
-      </div>
-    </div>
-  </div>
-
   <script>
     const BUNG_BU_APP_URL = "https://script.google.com/macros/s/AKfycbypGlJUjavguYjlSdpFeWfuQrPntjd2fAipQo6-2XNrjJxhzg2qTOs6GrFoSPwBGDOC/exec";
 
@@ -155,15 +65,12 @@
     const WRAPPER_SESSION_DAYS = 7;
     const WRAPPER_SESSION_MS = WRAPPER_SESSION_DAYS * 24 * 60 * 60 * 1000;
 
-    function showWrapperLoading() {
-      const el = document.getElementById("wrapperLoading");
-      if (el) el.classList.remove("hidden");
-    }
-
-    function hideWrapperLoading() {
-      const el = document.getElementById("wrapperLoading");
-      if (el) el.classList.add("hidden");
-    }
+    /*
+      Quan trọng:
+      Tắt reload từ app chính để tránh lỗi vừa vào app lại bị đá về màn tải lại.
+      Nếu sau này thật sự cần reload từ app chính thì đổi thành true.
+    */
+    const ENABLE_WRAPPER_RELOAD_MESSAGE = false;
 
     function isAllowedBungBuOrigin(origin) {
       try {
@@ -184,7 +91,10 @@
     }
 
     function isWrapperSessionValid(sessionData) {
-      if (!sessionData || !sessionData.user || !sessionData.expiresAt) return false;
+      if (!sessionData || !sessionData.user || !sessionData.expiresAt) {
+        return false;
+      }
+
       return Date.now() < Number(sessionData.expiresAt);
     }
 
@@ -202,7 +112,10 @@
 
         localStorage.setItem(WRAPPER_SESSION_KEY, JSON.stringify(nextSession));
 
-        console.log("[WRAPPER] Đã lưu session:", nextSession.user && nextSession.user.employeeCode);
+        console.log(
+          "[WRAPPER] Đã lưu session:",
+          nextSession.user && nextSession.user.employeeCode
+        );
       } catch (e) {
         console.warn("[WRAPPER] Không lưu được session:", e);
       }
@@ -211,6 +124,7 @@
     function loadWrapperSession() {
       try {
         const raw = localStorage.getItem(WRAPPER_SESSION_KEY);
+
         if (!raw) return null;
 
         const sessionData = JSON.parse(raw);
@@ -220,6 +134,7 @@
           return null;
         }
 
+        // Gia hạn phiên mỗi lần mở app
         sessionData.expiresAt = getWrapperLoginExpiryTimestamp();
         sessionData.updatedAt = Date.now();
 
@@ -227,7 +142,10 @@
 
         return sessionData;
       } catch (e) {
-        localStorage.removeItem(WRAPPER_SESSION_KEY);
+        try {
+          localStorage.removeItem(WRAPPER_SESSION_KEY);
+        } catch (err) {}
+
         return null;
       }
     }
@@ -272,23 +190,19 @@
 
     function loadBungBuFrame() {
       const frame = document.getElementById("bungBuFrame");
+
       if (!frame) return;
-    
-      showWrapperLoading();
-    
+
       frame.src = buildFrameUrl();
-    
-      // Chống kẹt màn loading nếu iframe load chậm hoặc iOS không bắn event load chuẩn.
-      setTimeout(function() {
-        hideWrapperLoading();
-      }, 8000);
     }
 
     function sendWrapperSessionToFrame() {
       const frame = document.getElementById("bungBuFrame");
+
       if (!frame || !frame.contentWindow) return;
 
       const sessionData = loadWrapperSession();
+
       if (!sessionData) return;
 
       try {
@@ -298,7 +212,10 @@
           sentAt: Date.now()
         }, "*");
 
-        console.log("[WRAPPER] Đã gửi session vào iframe:", sessionData.user && sessionData.user.employeeCode);
+        console.log(
+          "[WRAPPER] Đã gửi session vào iframe:",
+          sessionData.user && sessionData.user.employeeCode
+        );
       } catch (e) {
         console.warn("[WRAPPER] Không gửi được session vào iframe:", e);
       }
@@ -312,38 +229,39 @@
       });
     }
 
-    function reloadBungBuFrame() {
-      loadBungBuFrame();
-    }
-
     window.addEventListener("message", function(event) {
       if (!event.data || !event.data.type) return;
-    
+
       if (!isAllowedBungBuOrigin(event.origin)) {
         console.warn("[WRAPPER] Bỏ qua message từ origin:", event.origin);
         return;
       }
-    
+
       if (event.data.type === "BUNG_BU_RELOAD_APP") {
-        reloadBungBuFrame();
+        console.log("[WRAPPER] Nhận BUNG_BU_RELOAD_APP nhưng đã tắt reload để tránh văng app.");
+
+        if (ENABLE_WRAPPER_RELOAD_MESSAGE) {
+          loadBungBuFrame();
+        }
+
         return;
       }
-    
+
       if (event.data.type === "BUNG_BU_SAVE_SESSION") {
         saveWrapperSession(event.data.sessionData);
-    
-        // Quan trọng:
-        // Không reload iframe tại đây để tránh vòng lặp loading vô hạn.
+
+        // Không reload iframe ở đây.
+        // Chỉ gửi session lại vào app để tránh vòng lặp tải lại.
         sendWrapperSessionToFrameRepeated();
-    
+
         return;
       }
-    
+
       if (event.data.type === "BUNG_BU_CLEAR_SESSION") {
         clearWrapperSession();
         return;
       }
-    
+
       if (event.data.type === "BUNG_BU_REQUEST_SESSION") {
         sendWrapperSessionToFrameRepeated();
         return;
@@ -354,14 +272,8 @@
 
     if (frame) {
       frame.addEventListener("load", function() {
-        setTimeout(hideWrapperLoading, 450);
         sendWrapperSessionToFrameRepeated();
       });
-    
-      // Fallback lần nữa cho iPhone/Android nếu load event bị lỗi.
-      setTimeout(function() {
-        hideWrapperLoading();
-      }, 10000);
     }
 
     window.addEventListener("pageshow", function() {
