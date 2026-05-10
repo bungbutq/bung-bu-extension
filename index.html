@@ -126,7 +126,7 @@
   <iframe
     id="bungBuFrame"
     class="app-frame"
-    src="https://script.google.com/macros/s/AKfycbypGlJUjavguYjlSdpFeWfuQrPntjd2fAipQo6-2XNrjJxhzg2qTOs6GrFoSPwBGDOC/exec?embed=github"
+    src="about:blank"
     allow="clipboard-read; clipboard-write; geolocation; fullscreen"
     allowfullscreen
   ></iframe>
@@ -220,7 +220,6 @@
           return null;
         }
 
-        // Gia hạn phiên mỗi lần mở app
         sessionData.expiresAt = getWrapperLoginExpiryTimestamp();
         sessionData.updatedAt = Date.now();
 
@@ -238,6 +237,45 @@
         localStorage.removeItem(WRAPPER_SESSION_KEY);
         console.log("[WRAPPER] Đã xóa session.");
       } catch (e) {}
+    }
+
+    function encodeBase64Url(text) {
+      try {
+        const utf8 = encodeURIComponent(text).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+          return String.fromCharCode("0x" + p1);
+        });
+
+        return btoa(utf8)
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/=+$/g, "");
+      } catch (e) {
+        return "";
+      }
+    }
+
+    function buildFrameUrl() {
+      const sessionData = loadWrapperSession();
+
+      let url = BUNG_BU_APP_URL + "?embed=github&_t=" + Date.now();
+
+      if (sessionData && sessionData.user) {
+        const encoded = encodeBase64Url(JSON.stringify(sessionData));
+
+        if (encoded) {
+          url += "&bb_session=" + encodeURIComponent(encoded);
+        }
+      }
+
+      return url;
+    }
+
+    function loadBungBuFrame() {
+      const frame = document.getElementById("bungBuFrame");
+      if (!frame) return;
+
+      showWrapperLoading();
+      frame.src = buildFrameUrl();
     }
 
     function sendWrapperSessionToFrame() {
@@ -269,19 +307,16 @@
     }
 
     function reloadBungBuFrame() {
-      const frame = document.getElementById("bungBuFrame");
-      if (!frame) return;
-
-      showWrapperLoading();
-
-      frame.src = BUNG_BU_APP_URL + "?embed=github&_reload=" + Date.now();
+      loadBungBuFrame();
     }
 
     window.addEventListener("message", function(event) {
       if (!event.data || !event.data.type) return;
 
-      // Chỉ nhận message từ Apps Script / Googleusercontent
-      if (!isAllowedBungBuOrigin(event.origin)) return;
+      if (!isAllowedBungBuOrigin(event.origin)) {
+        console.warn("[WRAPPER] Bỏ qua message từ origin:", event.origin);
+        return;
+      }
 
       if (event.data.type === "BUNG_BU_RELOAD_APP") {
         reloadBungBuFrame();
@@ -291,8 +326,11 @@
       if (event.data.type === "BUNG_BU_SAVE_SESSION") {
         saveWrapperSession(event.data.sessionData);
 
-        // Sau khi lưu xong, bơm lại luôn vào iframe cho chắc
-        sendWrapperSessionToFrameRepeated();
+        // Sau khi lưu xong, reload iframe để nhét session vào URL bb_session
+        setTimeout(function() {
+          loadBungBuFrame();
+        }, 250);
+
         return;
       }
 
@@ -312,8 +350,6 @@
     if (frame) {
       frame.addEventListener("load", function() {
         setTimeout(hideWrapperLoading, 450);
-
-        // Gửi lại phiên đăng nhập từ GitHub wrapper vào iframe nhiều lần
         sendWrapperSessionToFrameRepeated();
       });
     }
@@ -332,8 +368,7 @@
       }
     });
 
-    // Khi mở app lần đầu, thử bơm session luôn
-    sendWrapperSessionToFrameRepeated();
+    loadBungBuFrame();
 
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("./sw.js").catch(function(e) {
