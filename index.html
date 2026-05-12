@@ -59,7 +59,7 @@
   ></iframe>
 
   <script>
-    const BUNG_BU_APP_URL = "https://script.google.com/macros/s/AKfycbzAj2k8PX-FyNQ7MJ4tj4XAkwnCstPiQXtzKnKt541sSnwGne9-AV-Jk4sQhM74ZvsL/exec";
+    const BBX_MAIN_APP_URL = "https://script.google.com/macros/s/AKfycbzAj2k8PX-FyNQ7MJ4tj4XAkwnCstPiQXtzKnKt541sSnwGne9-AV-Jk4sQhM74ZvsL/exec";
 
 
     const APP_URL_BY_BRANCH = {
@@ -177,7 +177,14 @@
     function buildFrameUrl(baseAppUrl) {
       const sessionData = loadWrapperSession();
     
-      const appUrl = baseAppUrl || loadTargetAppUrl() || BBX_MAIN_APP_URL;
+      // Nếu có targetAppUrl truyền trực tiếp thì mở target đó.
+      // Nếu không có session thì luôn mở BBX_MAIN để đăng nhập.
+      // Nếu có session + đã lưu target thì mở lại đúng app bưu cục.
+      let appUrl = baseAppUrl || BBX_MAIN_APP_URL;
+    
+      if (!baseAppUrl && sessionData && sessionData.user) {
+        appUrl = loadTargetAppUrl() || BBX_MAIN_APP_URL;
+      }
     
       let url = appUrl + "?embed=github&_t=" + Date.now();
     
