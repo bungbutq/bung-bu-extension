@@ -59,7 +59,17 @@
   ></iframe>
 
   <script>
-    const BUNG_BU_APP_URL = "https://script.google.com/macros/s/AKfycbypGlJUjavguYjlSdpFeWfuQrPntjd2fAipQo6-2XNrjJxhzg2qTOs6GrFoSPwBGDOC/exec";
+    const BUNG_BU_APP_URL = "https://script.google.com/macros/s/AKfycbzAj2k8PX-FyNQ7MJ4tj4XAkwnCstPiQXtzKnKt541sSnwGne9-AV-Jk4sQhM74ZvsL/exec";
+
+
+    const APP_URL_BY_BRANCH = {
+      "207A01": "https://script.google.com/macros/s/AKfycbzEWnNVT_TRmZXGZhQzvx9csK9RzPJpG9yWzvUX-wg6nK96pS50SoiiQDNb8PK6mMczZQ/exec",
+      "207A02": "https://script.google.com/macros/s/AKfycbx4wGrd3wNHxS8rtyxtUlWP_KYS7aLs35n4N7-5jB9Ty-LccPxHnGXaBzX9mrS0mPLn9w/exec",
+      "207F02": "https://script.google.com/macros/s/AKfycbypGlJUjavguYjlSdpFeWfuQrPntjd2fAipQo6-2XNrjJxhzg2qTOs6GrFoSPwBGDOC/exec",
+      "207F03": "https://script.google.com/macros/s/AKfycbyS1r0fp3_AbsIxGC4UjQm5G_KtCYpo0oMD9IeFBE0GSfWhQNu9m6XfTrfIJPBoOvQ-vg/exec"
+    };
+    
+    const WRAPPER_TARGET_APP_KEY = "bb_wrapper_target_app_url";
 
     const WRAPPER_SESSION_KEY = "bb_wrapper_logged_in_user";
     const WRAPPER_SESSION_DAYS = 7;
@@ -164,28 +174,30 @@
       }
     }
 
-    function buildFrameUrl() {
+    function buildFrameUrl(baseAppUrl) {
       const sessionData = loadWrapperSession();
-
-      let url = BUNG_BU_APP_URL + "?embed=github&_t=" + Date.now();
-
+    
+      const appUrl = baseAppUrl || loadTargetAppUrl() || BBX_MAIN_APP_URL;
+    
+      let url = appUrl + "?embed=github&_t=" + Date.now();
+    
       if (sessionData && sessionData.user) {
         const encoded = encodeBase64Url(JSON.stringify(sessionData));
-
+    
         if (encoded) {
           url += "&bb_session=" + encodeURIComponent(encoded);
         }
       }
-
+    
       return url;
     }
 
-    function loadBungBuFrame() {
+    function loadBungBuFrame(targetAppUrl) {
       const frame = document.getElementById("bungBuFrame");
-
+    
       if (!frame) return;
-
-      frame.src = buildFrameUrl();
+    
+      frame.src = buildFrameUrl(targetAppUrl);
     }
 
     function sendWrapperSessionToFrame() {
@@ -221,6 +233,50 @@
       });
     }
 
+    
+    function isAllowedTargetAppUrl(url) {
+      if (!url) return false;
+    
+      if (url === BBX_MAIN_APP_URL) return true;
+    
+      return Object.keys(APP_URL_BY_BRANCH).some(function(code) {
+        return APP_URL_BY_BRANCH[code] === url;
+      });
+    }
+    
+    function saveTargetAppUrl(url) {
+      try {
+        if (!isAllowedTargetAppUrl(url)) return false;
+    
+        localStorage.setItem(WRAPPER_TARGET_APP_KEY, url);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+    
+    function loadTargetAppUrl() {
+      try {
+        const url = localStorage.getItem(WRAPPER_TARGET_APP_KEY);
+    
+        if (isAllowedTargetAppUrl(url)) {
+          return url;
+        }
+    
+        localStorage.removeItem(WRAPPER_TARGET_APP_KEY);
+      } catch (e) {}
+    
+      return BBX_MAIN_APP_URL;
+    }
+    
+    function clearTargetAppUrl() {
+      try {
+        localStorage.removeItem(WRAPPER_TARGET_APP_KEY);
+      } catch (e) {}
+    }
+
+
+    
     async function cleanupOldServiceWorkersAndCaches() {
       try {
         if ("serviceWorker" in navigator) {
@@ -263,15 +319,21 @@
 
       if (event.data.type === "BUNG_BU_SAVE_SESSION") {
         saveWrapperSession(event.data.sessionData);
-
-        // Không reload iframe ở đây.
+      
+        if (event.data.targetAppUrl && isAllowedTargetAppUrl(event.data.targetAppUrl)) {
+          saveTargetAppUrl(event.data.targetAppUrl);
+          loadBungBuFrame(event.data.targetAppUrl);
+          return;
+        }
+      
         sendWrapperSessionToFrameRepeated();
-
         return;
       }
 
       if (event.data.type === "BUNG_BU_CLEAR_SESSION") {
         clearWrapperSession();
+        clearTargetAppUrl();
+        loadBungBuFrame(BBX_MAIN_APP_URL);
         return;
       }
 
