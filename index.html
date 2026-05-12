@@ -61,13 +61,6 @@
   <script>
     const BBX_MAIN_APP_URL = "https://script.google.com/macros/s/AKfycbzAj2k8PX-FyNQ7MJ4tj4XAkwnCstPiQXtzKnKt541sSnwGne9-AV-Jk4sQhM74ZvsL/exec";
 
-
-    const APP_URL_BY_BRANCH = {
-      "207A01": "https://script.google.com/macros/s/AKfycbzEWnNVT_TRmZXGZhQzvx9csK9RzPJpG9yWzvUX-wg6nK96pS50SoiiQDNb8PK6mMczZQ/exec",
-      "207A02": "https://script.google.com/macros/s/AKfycbx4wGrd3wNHxS8rtyxtUlWP_KYS7aLs35n4N7-5jB9Ty-LccPxHnGXaBzX9mrS0mPLn9w/exec",
-      "207F02": "https://script.google.com/macros/s/AKfycbypGlJUjavguYjlSdpFeWfuQrPntjd2fAipQo6-2XNrjJxhzg2qTOs6GrFoSPwBGDOC/exec",
-      "207F03": "https://script.google.com/macros/s/AKfycbyS1r0fp3_AbsIxGC4UjQm5G_KtCYpo0oMD9IeFBE0GSfWhQNu9m6XfTrfIJPBoOvQ-vg/exec"
-    };
     
     const WRAPPER_TARGET_APP_KEY = "bb_wrapper_target_app_url";
 
@@ -177,9 +170,6 @@
     function buildFrameUrl(baseAppUrl) {
       const sessionData = loadWrapperSession();
     
-      // Nếu có targetAppUrl truyền trực tiếp thì mở target đó.
-      // Nếu không có session thì luôn mở BBX_MAIN để đăng nhập.
-      // Nếu có session + đã lưu target thì mở lại đúng app bưu cục.
       let appUrl = baseAppUrl || BBX_MAIN_APP_URL;
     
       if (!baseAppUrl && sessionData && sessionData.user) {
@@ -188,7 +178,9 @@
     
       let url = appUrl + "?embed=github&_t=" + Date.now();
     
-      if (sessionData && sessionData.user) {
+      const isMainApp = appUrl === BBX_MAIN_APP_URL;
+    
+      if (!isMainApp && sessionData && sessionData.user) {
         const encoded = encodeBase64Url(JSON.stringify(sessionData));
     
         if (encoded) {
@@ -242,13 +234,21 @@
 
     
     function isAllowedTargetAppUrl(url) {
-      if (!url) return false;
+      try {
+        if (!url) return false;
     
-      if (url === BBX_MAIN_APP_URL) return true;
+        if (url === BBX_MAIN_APP_URL) return true;
     
-      return Object.keys(APP_URL_BY_BRANCH).some(function(code) {
-        return APP_URL_BY_BRANCH[code] === url;
-      });
+        const u = new URL(url);
+    
+        if (u.origin !== "https://script.google.com") {
+          return false;
+        }
+    
+        return /^\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(u.pathname);
+      } catch (e) {
+        return false;
+      }
     }
     
     function saveTargetAppUrl(url) {
