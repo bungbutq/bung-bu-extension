@@ -68,6 +68,49 @@
     const WRAPPER_SESSION_DAYS = 7;
     const WRAPPER_SESSION_MS = WRAPPER_SESSION_DAYS * 24 * 60 * 60 * 1000;
 
+    
+    const WRAPPER_LOGOUT_LOCK_KEY = "bb_wrapper_logout_lock_until";
+    
+    let wrapperSessionSendToken = 0;
+    let wrapperLogoutLockUntil = 0;
+    
+    function getWrapperLogoutLockUntil() {
+      try {
+        return Math.max(
+          Number(wrapperLogoutLockUntil || 0),
+          Number(localStorage.getItem(WRAPPER_LOGOUT_LOCK_KEY) || 0)
+        );
+      } catch (e) {
+        return Number(wrapperLogoutLockUntil || 0);
+      }
+    }
+    
+    function isWrapperLogoutLocked() {
+      return Date.now() < getWrapperLogoutLockUntil();
+    }
+    
+    function startWrapperLogoutLock(durationMs) {
+      const until = Date.now() + Number(durationMs || 3000);
+      wrapperLogoutLockUntil = until;
+    
+      try {
+        localStorage.setItem(WRAPPER_LOGOUT_LOCK_KEY, String(until));
+      } catch (e) {}
+    
+      // Hủy toàn bộ lịch gửi session cũ.
+      wrapperSessionSendToken++;
+    }
+    
+    function clearWrapperLogoutLockIfExpired() {
+      if (!isWrapperLogoutLocked()) {
+        try {
+          localStorage.removeItem(WRAPPER_LOGOUT_LOCK_KEY);
+        } catch (e) {}
+      }
+    }
+
+
+    
     function isAllowedBungBuOrigin(origin) {
       try {
         const host = new URL(origin).hostname;
@@ -96,6 +139,13 @@
 
     function saveWrapperSession(sessionData) {
       try {
+        clearWrapperLogoutLockIfExpired();
+    
+        if (isWrapperLogoutLocked()) {
+          console.log("[WRAPPER] Đang logout, bỏ qua save session.");
+          return;
+        }
+    
         if (!sessionData || !sessionData.user) return;
 
         const nextSession = {
@@ -119,6 +169,12 @@
 
     function loadWrapperSession() {
       try {
+        clearWrapperLogoutLockIfExpired();
+    
+        if (isWrapperLogoutLocked()) {
+          return null;
+        }
+    
         const raw = localStorage.getItem(WRAPPER_SESSION_KEY);
 
         if (!raw) return null;
@@ -146,6 +202,8 @@
     }
 
     function clearWrapperSession() {
+      startWrapperLogoutLock(3500);
+    
       try {
         localStorage.removeItem(WRAPPER_SESSION_KEY);
         console.log("[WRAPPER] Đã xóa session.");
@@ -200,6 +258,11 @@
     }
 
     function sendWrapperSessionToFrame() {
+      if (isWrapperLogoutLocked()) {
+        console.log("[WRAPPER] Đang logout, không gửi session vào iframe.");
+        return;
+      }
+    
       const frame = document.getElementById("bungBuFrame");
 
       if (!frame || !frame.contentWindow) return;
@@ -225,8 +288,15 @@
     }
 
     function sendWrapperSessionToFrameRepeated() {
+      if (isWrapperLogoutLocked()) return;
+    
+      const token = ++wrapperSessionSendToken;
+    
       [0, 250, 700, 1500, 3000, 5000, 8000].forEach(function(delay) {
         setTimeout(function() {
+          if (token !== wrapperSessionSendToken) return;
+          if (isWrapperLogoutLocked()) return;
+    
           sendWrapperSessionToFrame();
         }, delay);
       });
@@ -325,6 +395,11 @@
       }
 
       if (event.data.type === "BUNG_BU_SAVE_SESSION") {
+        if (isWrapperLogoutLocked()) {
+          console.log("[WRAPPER] Đang logout, bỏ qua BUNG_BU_SAVE_SESSION.");
+          return;
+        }
+      
         saveWrapperSession(event.data.sessionData);
       
         if (event.data.targetAppUrl && isAllowedTargetAppUrl(event.data.targetAppUrl)) {
@@ -340,7 +415,17 @@
       if (event.data.type === "BUNG_BU_CLEAR_SESSION") {
         clearWrapperSession();
         clearTargetAppUrl();
-        loadBungBuFrame(BBX_MAIN_APP_URL);
+      
+        const frame = document.getElementById("bungBuFrame");
+      
+        if (frame) {
+          frame.src = "about:blank";
+        }
+      
+        setTimeout(function() {
+          loadBungBuFrame(BBX_MAIN_APP_URL);
+        }, 180);
+      
         return;
       }
 
