@@ -423,7 +423,25 @@
         }
       
         setTimeout(function() {
-          loadBungBuFrame(BBX_MAIN_APP_URL);
+          const nextFrame = document.getElementById("bungBuFrame");
+          if (!nextFrame) return;
+      
+          // Mở MAIN với cờ logout để MAIN tự xóa session local còn sót.
+          nextFrame.src = BBX_MAIN_APP_URL + "?embed=github&logout=1&_t=" + Date.now();
+      
+          // Gửi thêm message ép logout để chắc chắn.
+          [500, 1200, 2500].forEach(function(delay) {
+            setTimeout(function() {
+              try {
+                if (nextFrame && nextFrame.contentWindow) {
+                  nextFrame.contentWindow.postMessage({
+                    type: "BUNG_BU_FORCE_LOGOUT",
+                    sentAt: Date.now()
+                  }, "*");
+                }
+              } catch (e) {}
+            }, delay);
+          });
         }, 180);
       
         return;
