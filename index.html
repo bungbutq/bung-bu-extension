@@ -412,40 +412,40 @@
         return;
       }
 
-      if (event.data.type === "BUNG_BU_CLEAR_SESSION") {
-        clearWrapperSession();
-        clearTargetAppUrl();
-      
-        const frame = document.getElementById("bungBuFrame");
-      
-        if (frame) {
-          frame.src = "about:blank";
-        }
-      
-        setTimeout(function() {
-          const nextFrame = document.getElementById("bungBuFrame");
-          if (!nextFrame) return;
-      
-          // Mở MAIN với cờ logout để MAIN tự xóa session local còn sót.
-          nextFrame.src = BBX_MAIN_APP_URL + "?embed=github&logout=1&_t=" + Date.now();
-      
-          // Gửi thêm message ép logout để chắc chắn.
-          [500, 1200, 2500].forEach(function(delay) {
-            setTimeout(function() {
-              try {
-                if (nextFrame && nextFrame.contentWindow) {
-                  nextFrame.contentWindow.postMessage({
-                    type: "BUNG_BU_FORCE_LOGOUT",
-                    sentAt: Date.now()
-                  }, "*");
-                }
-              } catch (e) {}
-            }, delay);
-          });
-        }, 180);
-      
-        return;
+    if (event.data.type === "BUNG_BU_CLEAR_SESSION") {
+      clearWrapperSession();
+      clearTargetAppUrl();
+    
+      const frame = document.getElementById("bungBuFrame");
+    
+      if (frame) {
+        frame.src = "about:blank";
       }
+    
+      setTimeout(function() {
+        const nextFrame = document.getElementById("bungBuFrame");
+        if (!nextFrame) return;
+    
+        // Mở MAIN với cờ logout để MAIN tự xóa session local còn sót.
+        nextFrame.src = BBX_MAIN_APP_URL + "?embed=github&logout=1&_t=" + Date.now();
+    
+        // Gửi thêm message ép logout để chắc chắn, nhất là iPhone/PWA.
+        [500, 1200, 2500].forEach(function(delay) {
+          setTimeout(function() {
+            try {
+              if (nextFrame && nextFrame.contentWindow) {
+                nextFrame.contentWindow.postMessage({
+                  type: "BUNG_BU_FORCE_LOGOUT",
+                  sentAt: Date.now()
+                }, "*");
+              }
+            } catch (e) {}
+          }, delay);
+        });
+      }, 180);
+    
+      return;
+    }
 
       if (event.data.type === "BUNG_BU_REQUEST_SESSION") {
         sendWrapperSessionToFrameRepeated();
