@@ -202,7 +202,7 @@
     }
 
     function clearWrapperSession() {
-      startWrapperLogoutLock(3500);
+      startWrapperLogoutLock(15000);
     
       try {
         localStorage.removeItem(WRAPPER_SESSION_KEY);
@@ -430,7 +430,7 @@
         nextFrame.src = BBX_MAIN_APP_URL + "?embed=github&logout=1&_t=" + Date.now();
     
         // Gửi thêm message ép logout để chắc chắn, nhất là iPhone/PWA.
-        [500, 1200, 2500].forEach(function(delay) {
+        [500, 1200, 2500, 5000, 9000].forEach(function(delay) {
           setTimeout(function() {
             try {
               if (nextFrame && nextFrame.contentWindow) {
